@@ -1,0 +1,581 @@
+Author: JollyFrogs, Brisbane, Australia
+Version: 0.1
+Revision date: 14 August 2016
+Updates:
+v01: Initial document
+
+Note: This guide is written for Windows 7 64-bit Host OS, I strongly advise using this operating system to install your OSCP Kali VM.
+
+This is the hardware that I used to set up this lab, if you don't have similar or better hardware, I advise investing a little in getting good hardware:
+Asus Maximus Hero VI motherboard
+32GB memory (Kingston)
+Intel 120GB SSD
+Core i7-4770K CPU @ 3.50GHz, 4 Core(s), 8 Logical Processors
+Windows 7 64-bit (6.1.7601 SP1)
+
+I have created this lab using my own network IP addressing, details of which are:
+(All subnet masks in the LAN are /24 aka 255.255.255.0)
+
+The following components are what I start with, just my PC and a router which I used as default gateway to connect to the internet:
+10.123.1.1 = My physical internet router (a Ubiquity ERLite3) which acts as my default gateway and DNS server.
+10.123.1.110 = My main PC LAN interface, we will lose this IP when we configure a BRIDGE interface later
+
+The following IP addresses are used for various components that are added during this guide:
+10.123.1.110 = My main PC BRIDGE interface
+10.123.1.199 = Kali 1.1.0a VirtualBox VM
+
+You have two options when following this guide:
+1) Rename all references to the IP addresses above and in this guide to IP addresses you are using on your LAN.
+or
+2) Renumber your internal network IP addressing to use the same IP addresses as in this guide.
+
+You do not need hardware components to set up this lab other than a beefy PC, everything will be running in VirtualBox on your PC. 
+
+------------
+Preparations
+------------
+
+Important notice: Do not skim over these instructions, they provide the foundation of your environment. Any typo or mistake here will affect your environment later in unpredictable ways, please take the time to go through these steps carefully. Spelling matters, typos matter. If you run into any issues during installation, please re-read the instructions carefully and ensure you haven't made a typo. 
+
+IMPORTANT Note: I don't isolate hosts on my network. This is a very *UNSAFE* practice, especially when meddling with vulnerable applications and systems while coding and testing new exploits. I run a simple but good firewall (Ubiquity ERLite3) which protects my network from outside attacks, but more importantly, I have off-line backups of all my important files and documents. If this is something that you don't feel 100% comfortable with, then you should set up an isolated network which is totally segregated from your home network. VirtualBox supports this kind of set up via "Host-only adapters" but this guide doesn't cover such a setup.
+
+Get required files:
+--------------------
+VirtualBox 5.1.0 r108711:
+http://download.virtualbox.org/virtualbox/5.0.0/VirtualBox-5.1.0-108711-Win.exe
+
+Kali 2016.1 (kali-linux-2016.1-amd64.iso):
+http://cdimage.kali.org/kali-2016.1/kali-linux-2016.1-amd64.iso
+
+Create and bridge a loop-back adapter so your virtual machines can talk to your physical PC and network
+-------------------------------------------------------------------------------------------------------
+- Click the Windows Start button (bottom left)
+- type "cmd" but do not press enter
+- Right-click "cmd.exe" (top of start bar menu) and select "run as Administrator" (Click "Yes" to confirm)
+Note: In the black cmd.exe screen:
+	- type "hdwwiz.exe" and press Enter
+	Note: the "Add Hardware Wizard" window opens
+		- Click "Next"
+		- Select “Install the hardware that I manually select from a list (Advanced)” and click "Next"
+		- Select “Network adapters” and click "Next"
+		- Select “Microsoft” and “Microsoft Loopback Adapter” under Manufacturer and Network Adapter respectively, then click "Next"
+		- Click "Next" to install the loopback adapter
+		- Click "Finish" to close the "Add Hardware" screen
+Note: We're still in the black cmd.exe screen: 
+	- type "ncpa.cpl" and press Enter
+	Note: the "Network Connections" window opens
+		- Right-click the adapter "Microsoft Loopback Adapter" and select "Rename" 
+			- Rename the Loopback Adapter to "LOOPBACK" to remove confusion later
+		- Right-click your wired network adapter and select "Rename"
+			- Rename your wired network adapter to "LAN"
+		- Highlight (left click while holding CTRL key pressed) both the LOOPBACK adapter and your LAN network adapter
+		- Right click on the LOOPBACK while both adapters are highlighted and select "Bridge Connections"
+		Note: This will create a new network card called "Network Bridge"
+		- Right-click your new bridge adapter and select "Rename"
+			- Rename your wired network adapter to "BRIDGE"
+		- Right-click "BRIDGE" and select "Properties"
+			In the "BRIDGE Properties" screen:
+				- Left-click (this highlights) "Internet Protocol Version 4 (TCP/IPv4)" and click "Properties"
+				In the "Internet Protocol Version 4 (TCP/IPv4) Properties" screen:
+					In the "General" tab at the top:
+					Select "Use the following IP address"
+						IP address: 10.123.1.110
+						Subnet mask: 255.255.255.0
+						Default gateway: 10.123.1.1
+						Preferred DNS server: 10.123.1.1
+						Alternate DNS server: <leave blank>
+						- Click "OK" to close the "Internet Protocol Version 4 (TCP/IPv4) Properties" screen
+			- Click "Close" to close the "BRIDGE Properties" screen
+Note: We're still in the black cmd.exe screen:
+	- type "ping www.google.com"
+	Note: You should see replies from the google web server. Your BRIDGE adapter is now your main network adapter
+	Note: Do not proceed if you do not have internet connectivity
+- Close the "Command Prompt" black cmd.exe screen
+
+Install VirtualBox
+------------------
+Run "VirtualBox-5.1.0-108711-Win.exe"
+Note: Click "Yes" on any opening warnings
+- Click "Next"
+- Click "Next" (install all options)
+- Click "Next"
+- Click "Yes" 
+- Click "Install" to start the installation
+- Click "Yes" at the UAC warning screen
+- If you get prompted: Click "Install" to install the device driver
+- Click "Finish"
+
+Install Kali 2016.1 on VirtualBox 5.1.0 r108711
+--------------------------------------------
+Start "Oracle VM VirtualBox"
+- Click "New" 
+		Name: kali2016.1-64bit-v01
+		Type: Linux
+		Version: Debian (64-bit)
+	- Click "Next"
+		MB: 2048
+	- Click "Next"
+Select "Create a virtual hard drive now"
+- Click "Create"
+- Select "VDI (VirtualBox Disk Image)" and Click "Next"
+- Select "Dynamically allocated" and Click "Next"
+- "F:\VIRTUALBOX_DISKS\kali2016.1-64bit-v01.vdi" (choose a location on a fast drive with at least 50GB of free space)
+- "50.00 GB" (to make sure we don't run out of space any time soon)
+- Click "Create"
+Note: A new icon "kali2016.1-64bit-v01" was created in your "Oracle VM VirtualBox Manager"
+
+Note: Leave settings at default unless otherwise stated below
+Note: I'm showing some important settings even though they are defaults, in case the defaults change some day
+- Right-click "kali2016.1-64bit-v01" in the left menu and click "Settings..."
+	General - Advanced - Shared Clipboard: "Bidirectional"
+	System - Motherboard - Floppy: Untick
+	System - Processor - Enable PAE/NX: Make sure this is ticked (this changed from our previous guide and we need it to install Kali2.0 with pae kernel)
+	In the "Storage" menu, Left-Click "Empty" to select it
+		On the far right, click on the blue tiny CD-Rom icon and click "Choose a virtual CD/DVD disk file..."
+		Select "D:\APPS\Linux - Kali\kali-linux-2016.1-amd64.iso" (choose your appropriate folder)
+	Network - Adapter 1 - Attached to: "Bridged Adapter"
+	Network - Adapter 1 - Name: "MAC Bridge Miniport"
+	Network - Adapter 1 - Advanced - Promiscuous Mode: Allow All
+	Network - Adapter 1 - Advanced - MAC Address: 888888888888
+Note: Set the MAC address to an easily identifiable MAC
+	Shared Folders - Click the blue folder icon with the green + 
+		Folder Path: Click on the pull down and select "Other..."
+		Navigate to "Computer" -> "Local Disk (E:)"
+		Click "Make New Folder" -> use "SHARED" as the name
+		With "E:\SHARED" highlighted click "OK"
+		Folder Name: SHARED
+		Tick "Auto-mount"
+		Click "OK" to create the shared folder
+- Click "OK" to close the "kali2016.1-64bit-v01 - Settings" screen
+
+- Right-click "kali2016.1-64bit-v01" in the left menu and click "Start" -> "Normal Start"
+Note: A new screen "kali2016.1-64bit-v01 [Running] - Oracle VM VirtualBox" opens and the Kali Linux installer will boot. 
+In the "kali2016.1-64bit-v01 [Running] - Oracle VM VirtualBox" screen:
+You will be presented with the Kali boot menu
+Use the down arrows on your keyboard to highlight "Install" and press Enter to start installation
+
+Note: The options below assume you're pressing <Enter> to select them:
+	Select "English - English"
+	Select "Australia" (select your country)
+	Select "American English"
+	Hostname: kali2016-1
+	Domain name: frog.pond (choose anything you want)
+	Root password: mysecret (choose any password you like)
+	Re-enter password to verify: mysecret
+	Select the state of province to set your time zone: "Queensland" (the sunny state!)
+	Partitioning method: "Guided - use entire disk"
+	Select disk to partition: "SCSIx (0,0,0) (sda) - 53.7 GB ATA VBOX HARDDISK"
+	Partitioning scheme: "All files in one partition (recommended for new users)"
+	"Finish partitioning and write changes to disk" - press <Enter>
+	Write the changes to disks? "Yes"
+Note: Kali will now copy required files off the virtual cd-rom to the virtual hard drive
+	Use a network mirror? "Yes"
+	Do you need a proxy: <leave empty> and select "Continue"
+Note: This step can take a while, the download is around 100-200 MB
+	Install the GRUB boot loader to the master boot record? "Yes"
+	Device for boot loader installation: "/dev/sda (ata-VBOX_HARDDISK_<random_numbers>)"
+	Installation Complete: "Continue"
+Note: Kali will reboot. Let the GNU GRUB boot menu time out or select "Kali GNU/Linux"
+
+- Username: root
+- Password: mysecret (whatever password you chose earlier)
+Note: You will be presented a desktop environment.
+
+In the left menu bar on the desktop, click the black "$_" icon ("terminal")
+In the "root@kali2016-1:~#" terminal window type:
+Note: You can not use copy/paste yet! We'll install VirtualBox guest additions for that first
+# ifconfig
+Note: You should have gotten an IP address from your network router.
+# ping 8.8.8.8
+Note: You should see replies from 8.8.8.8, if you do then you have internet access from Kali!
+Note: If you do not have internet access then do not continue installation and fix internet first
+
+Click the button on the left menu bar that looks like 9 tiny squares that form a bigger square ("Show Applications")
+In "Type to search..." at the top, type "power"
+Click the yellow "Power" icon that appears
+"Blank Screen:" Never
+Close the Power settings
+	
+Click the button on the left menu bar that looks like 9 tiny squares that form a bigger square ("Show Applications")
+In "Type to search..." at the top, type "privacy"
+Click the purple "Privacy" icon that appears
+Click "On" next to "Screen Lock" to turn it off -> Automatic Screenlock: "Off"
+Close the Privacy settings
+
+Click the button on the left menu bar that looks like a grey control panel ("Tweak Tool")
+Click "Extensions"
+Click the settings icon (looks like a bright sun) in the "Dash to Dock" line
+"Intelligent Auto-hide": Turn this off
+Close the Tweak Tool
+
+Note: You will need to update your distro to the latest version in order for everything to work well:
+# sudo apt-get update
+# sudo apt-get -y dist-upgrade
+Note: The download is about 1.2GB and can take a LONG time to complete:
+After the download completes, you will need to answer some questions about the upgraded components:
+Press SPACE a few times until you have finished reading the document
+In the "sslh configuration" screen select "standalone"
+In the "Configuring wireshark-common" screen select "<No>"
+In the "Configuring libc6:amd64" screen select "<Yes>"
+Note: The installation can take a while too - almost one hour on my system
+
+Note: You can not yet use copy/paste since we have not yet installed the VirtualBox guest additions.
+Install Virtualbox guest additions:
+Click "Devices" -> "Insert Guest Additions CD image..."
+Click "Cancel" when asked to auto-run it
+
+In the left menu bar on the desktop, click the black "$_" icon ("terminal")
+In the "root@kali2016-1:~#" terminal window type:
+# apt-get update
+# apt-get -y install linux-headers-`uname -r`
+# cd /root/
+# cp /media/cdrom/VBoxLinuxAdditions.run /root/
+# chmod 755 /root/VBoxLinuxAdditions.run
+# ./VBoxLinuxAdditions.run
+Note: After installation is complete, click Devices (Virtualbox top menu bar) -> Optical Drives -> "Remove disk from virtual drive" -> "Force unmount"
+# rm /root/VBoxLinuxAdditions.run
+# shutdown -h now
+
+After you have shutdown the Kali virtual machine:
+- Copy "lab-connection.tar.bz2" which you downloaded from offensive security to E:\SHARED\ on your PC
+
+After reboot, login with user root and password you configured earlier
+
+Note: Now that you have installed the VirtualBox additions to Kali, you can:
+	- Seamlessly move the mouse in and out of the virtual machine
+	- Copy/Paste to and from the virtual machine using clipboard
+	- Share folders between the virtual machine guest and your host machine
+
+Note: We configure the system to automatically login with root user. A very unsafe practice!
+In the right-side menu bar click the black "$_" icon ("terminal")
+# gsettings set org.gnome.login-screen banner-message-enable true
+# gsettings set org.gnome.login-screen banner-message-text "user=root pass=mysecret"
+# sed -i 's/#  AutomaticLoginEnable = true/AutomaticLoginEnable = true/g' /etc/gdm3/daemon.conf
+# sed -i 's/#  AutomaticLogin = root/AutomaticLogin = root/g' /etc/gdm3/daemon.conf
+# mkdir /root/osce
+
+We create an authorized_keys file to login via sshd:
+In Windows: 
+download https://the.earth.li/~sgtatham/putty/latest/x86/puttygen.exe
+run puttygen.exe
+  - Tick "SSH-2 RSA"
+  - Number of bits in a generated key: 2048
+  - Click "Generate"
+Note: Move the mouse randomly in the puttygen screen - this creates random data to create your key
+  - Key comment: kali2016.1
+  - Copy/paste the public key for pasting into OpenSSH authorized_keys file ("ssh-rsa <gibberish> kali2016.1")
+  - Click "Save Private Key" and save it to a safe location
+Note: If you use KeePass you can use KeeAgent and save the public and private key in your KeePass for autologin)
+
+In Kali: 
+# echo "ssh-rsa AAAAklajsfljaslkkjkjkgibberishetc== kali2016.1" > /root/.ssh/authorized_keys
+# chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys
+Note: Now you can login via your authorized_keys file (for instance via putty.exe or winscp.exe if you use the keeagent)
+
+Note: Install and auto-start OffSec VPN:
+# cd /root/ && cp /media/sf_SHARED/lab-connection.tar.bz2 /root/
+# cd /root/ && bzip2 -cd lab-connection.tar.bz2 | tar xvf -
+Note: In the next command, replace OS-XXXXX with your offsec userID
+# echo "OS-XXXXX" >> /etc/openvpn/osce_creds.conf
+Note: In the next command, replace myoffsecpassword with your offsec password
+# echo "myoffsecpassword" >> /etc/openvpn/osce_creds.conf
+# sed -i 's#ca lab-connection.pem#ca /etc/openvpn/osce_server.pem#g' /root/lab-connection/lab-connection.conf
+# sed -i 's#auth-user-pass#auth-user-pass /etc/openvpn/osce_creds.conf#g' /root/lab-connection/lab-connection.conf
+# cp /root/lab-connection/lab-connection.conf /etc/openvpn/osce_server.conf
+# sed -i 's/#AUTOSTART="home office"/AUTOSTART="osce_server"/g' /etc/default/openvpn
+Note: the two copy steps below are required to fix a bug in the init.d script of openvpn which looks for the wrong config file
+# cp /etc/openvpn/osce_server.conf /etc/openvpn/server.conf
+# cp /etc/openvpn/osce_server.conf /etc/openvpn/openvpn.conf
+# chmod +x /etc/openvpn/*.conf
+# update-rc.d openvpn enable
+
+Note: Install additional tools
+# apt-get -y install python-xlrd veil-evasion veil-catapult ldap-utils terminator python-notify pidgin pidgin-otr haveged freerdp-x11 mingw-w64 filezilla xdotool sshpass
+
+Note: We configure 3 proxychains configurations which we can use for different networks later
+# mkdir /root/proxy1 && mkdir /root/proxy2 && mkdir /root/proxy3
+# echo /root/proxy1/ /root/proxy2/ /root/proxy3 | xargs -n 1 cp /etc/proxychains.conf
+# sed -i 's/9050/9011/g' /root/proxy1/proxychains.conf && sed -i 's/socks4/socks5/g' /root/proxy1/proxychains.conf
+# sed -i 's/9050/9022/g' /root/proxy2/proxychains.conf && sed -i 's/socks4/socks5/g' /root/proxy2/proxychains.conf
+# sed -i 's/9050/9033/g' /root/proxy3/proxychains.conf && sed -i 's/socks4/socks5/g' /root/proxy3/proxychains.conf
+
+Note: You can set up proxychains to reach multiple networks as follows:
+Note: ssh -i /root/id_rsa -q -f -N -p <publicsshporthost1> host1user@publichost1ip -L 8011:localipofhost1:localsshportofhost1 2> /dev/null
+Note: ssh -i /root/id_rsa -q -f -N -D 127.0.0.1:9011 -p 8011 host1user@127.0.0.1 2> /dev/null
+Note: ssh -i /root/id_rsa -q -f -N -p <publicsshporthost2> host2user@publichost2ip -L 8022:localipofhost2:localsshportofhost2 2> /dev/null
+Note: ssh -i /root/id_rsa -q -f -N -D 127.0.0.1:9022 -p 8022 host2user@127.0.0.1 2> /dev/null
+Note: ssh -i /root/id_rsa -q -f -N -p <publicsshporthost3> host3user@publichost3ip -L 8033:localipofhost3:localsshportofhost3 2> /dev/null
+Note: ssh -i /root/id_rsa -q -f -N -D 127.0.0.1:9033 -p 8033 host3user@127.0.0.1 2> /dev/null
+Note: Now you can proxychain through host1 as follows:
+Note: cd /root/proxy1/ && proxychains curl localipofsomeremotehostonhost1network
+Note: Now you can proxychain through host2 as follows:
+Note: cd /root/proxy2/ && proxychains curl localipofsomeremotehostonhost2network
+Note: Now you can proxychain through host3 as follows:
+Note: cd /root/proxy3/ && proxychains curl localipofsomeremotehostonhost3network
+Note: As you can see, you can browse multiple networks by simply running the proxychains command from a different directory
+
+Note: b374k is a php shell with useful features
+# cd /root/osce/ && git clone https://github.com/b374k/b374k.git /root/osce/b374k
+# cd /root/osce/b374k && php -f index.php -- -l
+# php -f index.php -- -o jollyshell.php -p somepassword -s -b -z gzcompress -c 9
+# mkdir /root/osce/webshells && mv jollyshell.php /root/osce/webshells/jollyshell_somepassword.php
+
+PAExec lets you launch Windows programs on remote Windows computers without needing to install software on the remote computer first:
+# mkdir /root/osce/paexec && cd /root/osce/paexec/ && wget http://www.poweradmin.com/paexec/paexec.exe
+
+Now we run some Metasploit initialization commands:
+# update-rc.d postgresql enable && /etc/init.d/postgresql start
+# msfdb init
+# msfconsole
+Note: Don't do anything in Metasploit. It can take a while before the database has updated the cache.
+Note: Open up another terminal and type:
+# sudo -H -u postgres bash -c 'psql -d msf -c "select count(*) from module_details;"' | sed -n 3p
+Note: The query will return the number of rows updated thus far.
+Note: Add up all the exploits, auxiliary, post, payloads, encoders and nops in the welcome message
+Note: On a dist-upgraded Kali 2016.1 installation, this number would be around the 3238 mark.
+Note: After the database has fully updated, do the following:
+msf > exit
+# msfconsole
+msf > search auxiliary
+Note: You should NOT see a warning that the database is disconnected or the cache has not been updated
+msf > exit
+
+Start BurpSuite and FireFox ESR and configure it to use Burp as its proxy server as follows:
+# echo -e '#!/bin/bash\n/bin/rm -Rf /tmp/burp*.tmp;java -jar /usr/bin/burpsuite' > /root/.burp/startburp.sh && chmod +x /root/.burp/startburp.sh
+
+Start Burp as follows:
+# /root/.burp/startburp.sh
+- Minimize BurpSuite
+- Click the Orange/blue fox icon on the menu bar on the left ("FireFox ESR")
+Note: Note how open applications have a tiny grey dot next to them in the left menu bar indicating they are running
+Open Menu -> Preferences -> Advanced -> Network -> Settings...
+  Select "Manual proxy configuration"
+  HTTP Proxy: 127.0.0.1 Port 9500
+  Tick "Use this proxy server for all protocols"
+  No proxy for: localhost, 127.0.0.1
+  Click OK
+      
+Navigate to http://burp
+- Click "CA Certificate" in the top right -> Save File- 
+- In FireFox ESR open the FireFox ESR Menu.
+- Click on "Preferences".
+- Select the "Advanced" tab.
+- Select the "Certificates" tab
+  - Untick "Query OCSP responder servers to confirm the current validity of certificates"
+  - Click "View Certificates"
+  - Select the "Authorities" tab
+  - Click "Import", select the Burp CA certificate file that you previously saved and click “Open”.
+  Note: You will be asked for the root password to unlock your keyring
+    - In the dialog box that pops up, check the box "Trust this CA to identify web sites", and click "OK".
+    - Click "OK" and close all dialogs and close FireFox ESR and Burpsuite
+
+Note: Auto-start Apache and disable Apache 443 listener so we can use the port for reverse meterpreter shells
+# update-rc.d apache2 enable
+# sed -i 's/Listen 443/# Listen 443/g' /etc/apache2/ports.conf
+
+Note: We update nmap scripts
+# nmap --script-updatedb
+
+Note: Join #offsec IRC channel via pidgin
+# pidgin
+"Add..."
+  Protocol: IRC
+  Username: Jollyfrogs (use your own name preferably)
+  Server: irc.freenode.net
+  Password: yourpassword
+  Click Add
+In the "Buddy List" window:
+  Tools -> Preferences
+    Interface: Show system tray icon: Never
+  Buddies -> "Add Chat..." (Note: NOT "Join Chat...")
+  Account: JollyFrogs@irc.freenode.net (IRC)
+  Channel: #offsec
+  Password: <leave empty>
+  Alias: <leave empty>
+  Group: <leave empty>
+  Tick "Automatically join when account connects"
+  - Click "Add"
+Now, the trick to starting the buddy list hidden is to minimize the buddy list, then exit the application via "Conversation" -> "Close" (until all screens are closed. Then in your Bash screen, press CTRL-C to close pidgin. Next time you open it, buddy list will be hidden. It's a bit quirky and would have been much more userfriendly via a simple option in preferences.
+ 
+# mkdir /root/.config/terminator && gedit /root/.config/terminator/config
+Note: Copy paste below without ===============
+===============
+[global_config]
+  enabled_plugins = LaunchpadCodeURLHandler, APTURLHandler, LaunchpadBugURLHandler
+[keybindings]
+[profiles]
+  [[default]]
+    icon_bell = False
+[layouts]
+  [[default]]
+    [[[child1]]]
+      profile = default
+      type = Terminal
+      parent = window0
+      command = ""
+    [[[window0]]]
+      type = Window
+      parent = ""
+  [[Jollyfrogs]]
+    [[[child0]]]
+      position = 0:27
+      type = Window
+      order = 0
+      parent = ""
+      size = 1329, 650
+    [[[child1]]]
+      labels = NMAP1, NMAP2, MSFCONSOLE, PROXYCHAINS, BASH1, BASH2
+      type = Notebook
+      order = 0
+      parent = child0
+    [[[terminal2]]]
+      profile = default
+      command = ""
+      type = Terminal
+      order = 0
+      parent = child1
+    [[[terminal3]]]
+      profile = default
+      command = ""
+      type = Terminal
+      order = 1
+      parent = child1
+    [[[terminal4]]]
+      profile = default
+      command = ""
+      type = Terminal
+      order = 2
+      parent = child1
+    [[[terminal5]]]
+      profile = default
+      command = ""
+      type = Terminal
+      order = 3
+      parent = child1
+    [[[terminal6]]]
+      profile = default
+      command = ""
+      type = Terminal
+      order = 4
+      parent = child1
+    [[[terminal7]]]
+      profile = default
+      command = ""
+      type = Terminal
+      order = 5
+      parent = child1
+[plugins]
+===============
+Note: Save the file and exit gedit
+
+# mkdir /root/.config/autostart; gedit /root/.config/autostart/terminator.desktop
+[Desktop Entry]
+Type=Application
+Exec=terminator -l Jollyfrogs -p default
+Hidden=false
+X-GNOME-Autostart-enabled=true
+Name=Terminator
+Comment=Terminator
+
+# gedit /root/.config/autostart/burpsuite.desktop
+[Desktop Entry]
+Type=Application
+Exec=/root/.burp/startburp.sh
+Hidden=false
+X-GNOME-Autostart-enabled=true
+Name=BurpSuite
+Comment=BurpSuite
+
+# gedit /root/.config/autostart/pidgin.desktop
+[Desktop Entry]
+Type=Application
+Exec=/usr/bin/pidgin
+Hidden=false
+X-GNOME-Autostart-enabled=true
+Name=Pidgin
+Comment=Pidgin
+
+Note: "locate" command uses a database that is first built using "updatedb"
+# updatedb
+# apt-get update
+
+Disable natural scrolling (the feature that scrolls down to scroll up... unless you like the feature):
+# gsettings set org.gnome.desktop.peripherals.mouse natural-scroll false
+# gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll false
+
+Install showop.sh
+# wget https://raw.githubusercontent.com/JollyFrogs/tools/master/showop.sh -O /root/osce/showop.sh
+# chmod +x /root/osce/showop.sh
+# /root/osce/showop.sh "mov eax,ecx;inc eax;nop"
+
+Install hex2file.py
+# wget https://raw.githubusercontent.com/JollyFrogs/tools/master/hex2file.py -O /root/osce/hex2file.py
+# chmod +x /root/osce/hex2file.py
+# python hex2file.py hexfile.bin "\x41\x42\x43\x44\x45" && hexdump -C hexfile.bin
+
+Install pwntools:
+# cd /root/osce/ && git clone https://github.com/Gallopsled/pwntools.git /root/osce/pwntools
+# apt-get update
+# apt-get -y install python2.7 python-pip python-dev git libssl-dev
+# cd /root/osce/pwntools/ && pip install -e .
+
+Install pecloak:
+# cd /root/osce && mkdir /root/osce/pecloak
+# wget https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/libdasm/libdasm-beta.zip
+# unzip libdasm-beta.zip -d /root/osce/libdasm/ && cd /root/osce/libdasm/pydasm
+# python setup.py build_ext
+# sudo python setup.py install
+# wget 'http://git.n0p.cc/?p=SectionDoubleP.git;a=blob_plain;f=SectionDoubleP.py' -O /root/osce/pecloak/SectionDoubleP.py
+# wget http://www.securitysift.com/download/peCloak.py -O /root/osce/pecloak/pecloak.py
+# sed -i 's/pe.write(pe.OPTIONAL_HEADER.SizeOfHeaders, filename=fname)/pe.write(filename=fname)/g' /root/osce/pecloak/pecloak.py
+# cd /root/osce/pecloak/ && cp /root/osce/paexec/paexec.exe . && python pecloak.py paexec.exe
+
+Connect our Github account:
+# mkdir /root/github/ && cd /root/github/
+# gedit ~/.netrc
+----------------------------
+machine github.com
+login GITHUB_USERNAME
+password GITHUB_PASSWORD
+
+machine api.github.com
+login GITHUB_USERNAME
+password GITHUB_PASSWORD
+----------------------------
+# chmod 600 ~/.netrc
+# git config --global user.name GITHUB_USERNAME
+# git config --global user.email GITHUB_EMAIL
+# git init
+# git remote add origin https://github.com/JollyFrogs/tools.git
+# git remote -v
+# git pull origin master
+
+We'll upload our first file to https://github.com/JollyFrogs/tools/ via git
+# echo "All works in this GitHub folder are licensed under a Creative Commons Attribution-NonCommercial 4.0 International License." > /root/github/LICENSE
+# cd /root/github/ && git add .
+# git commit -m "Committed by JollyFrogs"
+# git push -u origin master
+
+Note: Any subsequent github files can be pushed to github as follows:
+# cp /root/osce/showop.sh /root/github
+# cd /root/github && git add . && git commit -m "Committed by JollyFrogs" && git push origin master
+
+Note: We're all done!
+Let's test our new installation by rebooting and seeing if everything comes up properly:
+# reboot
+ 
+Note: After verifying everything works and that your VPN is running, we back up our VM so you can restore a clean install in minutes if required
+# shutdown -h now
+
+In the "Oracle VM VirtualBox Manager" window:
+- Click "File" -> "Export Appliance..."
+- Left-click "kali2016.1-64bit-v01" to highlight it
+	- Click "Next >"
+	File: "F:\VIRTUALBOX_DISKS\kali2016.1-64bit-v01-CLEAN_ALL_APPS.ova"
+	Format: "OVF 1.0"
+	Write Manifest file: Tick
+	- Click "Next >"
+	- Click "Export"
+Note: The export can take quite a while
+
+Note: After the export finishes, we have completed the installation of Kali and are ready for the CTP (OSCE) labs!
